@@ -1,29 +1,33 @@
-package fileService
+package file
 
 import (
 	"fmt"
 	"os"
 
-	log "github.com/alexshv/file-storage/logger"
-	"github.com/alexshv/file-storage/repository"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 )
 
-func Download(requestId interface{}, key string) (string, error) {
+func (s *fileService) Download(requestId interface{}, key string) (string, error) {
+	log := s.log
+	repository := s.fileRepository
+
 	file, err := repository.GetFileByKey(key)
 
 	if err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
-			"message":   err,
+			"message":   err.Error(),
 		}).Error("fileService.download.databaseError")
+
+		return "", fiber.NewError(fiber.StatusInternalServerError)
 	}
 
 	if file == nil {
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
 		}).Warn("fileService.download.fileNotFoundInDatabase")
+
 		return "", fiber.NewError(fiber.StatusNotFound, "File not found")
 	}
 
@@ -32,18 +36,18 @@ func Download(requestId interface{}, key string) (string, error) {
 	_, err = os.Stat(filepath)
 
 	if err != nil && err == os.ErrNotExist {
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
-			"message":   err,
+			"message":   err.Error(),
 		}).Warn("fileService.download.fileNotFoundInStorage")
 
 		return "", fiber.NewError(fiber.StatusNotFound, "File not found")
 	}
 
 	if err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
-			"message":   err,
+			"message":   err.Error(),
 		}).Error("fileService.download.failedToFindFile")
 
 		return "", fiber.NewError(fiber.StatusInternalServerError)

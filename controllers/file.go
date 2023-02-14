@@ -1,42 +1,27 @@
-package handlers
+package controllers
 
 import (
-	"errors"
-
-	log "github.com/alexshv/file-storage/logger"
-	fileService "github.com/alexshv/file-storage/services/fileService"
+	container "github.com/alexshv/file-storage/container"
 	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 )
 
-func ErrorHandler(ctx *fiber.Ctx, err error) error {
-	code := fiber.StatusInternalServerError
-	message := "Internal Server Error"
+type fileController struct{}
 
-	var e *fiber.Error
-
-	if errors.As(err, &e) {
-		code = e.Code
-		message = e.Message
-	}
-
-	log.GetLogger().WithFields(logrus.Fields{
-		"status":  code,
-		"message": message,
-	}).Info("request.error")
-
-	return ctx.Status(code).JSON(fiber.Map{
-		"message": message,
-	})
+func NewFileController() *fileController {
+	return &fileController{}
 }
 
-func DownloadHandler(c *fiber.Ctx) error {
+func (ctr *fileController) Download(c *fiber.Ctx) error {
 	key := c.Params("key")
 	requestId := c.Locals("requestid")
+	container := c.Locals("container").(*container.Container)
+	log := container.GetLogger()
+	fileService := container.GetFileService()
 
-	log.GetLogger().WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"requestId": requestId,
 		"key":       key,
 	}).Info("handlers.downloadHandler.request")
@@ -44,7 +29,7 @@ func DownloadHandler(c *fiber.Ctx) error {
 	filepath, err := fileService.Download(requestId, key)
 
 	if err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
 			"message":   err,
 		}).Info("handlers.downloadHandler.error")
@@ -52,28 +37,34 @@ func DownloadHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	log.GetLogger().WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"requestId": requestId,
 	}).Info("handlers.downloadHandler.success")
 
 	return c.SendFile(filepath)
 }
 
-func UploadHandler(c *fiber.Ctx) error {
+func (ctr *fileController) Upload(c *fiber.Ctx) error {
 	uuid := uuid.New()
-	requestId := c.Locals("requestid")
 	clientChecksum := c.Query("checksum")
 	contentType := c.Get("Content-Type")
+
+	requestId := c.Locals("requestid")
+	container := c.Locals("container").(*container.Container)
+
 	bodyStream := c.Context().RequestBodyStream()
 
-	log.GetLogger().WithFields(logrus.Fields{
+	log := container.GetLogger()
+	fileService := container.GetFileService()
+
+	log.WithFields(logrus.Fields{
 		"requestId":      requestId,
 		"uuid":           uuid,
 		"clientChecksum": clientChecksum,
 	}).Info("handlers.uploadHandler.request")
 
 	if err := fileService.Upload(requestId, uuid, clientChecksum, contentType, bodyStream); err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
 			"message":   err,
 		}).Error("handlers.uploadHandler.error")
@@ -81,7 +72,7 @@ func UploadHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	log.GetLogger().WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"requestId": requestId,
 	}).Info("handlers.uploadHandler.success")
 

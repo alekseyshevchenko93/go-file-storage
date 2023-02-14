@@ -7,11 +7,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Logger struct {
-	logrus *log.Logger
-}
+func New() *log.Logger {
+	logrus := log.New()
+	logrus.SetFormatter(CustomerFormatter{&log.JSONFormatter{}})
 
-var logger *Logger
+	return logrus
+}
 
 type CustomerFormatter struct {
 	log.Formatter
@@ -27,17 +28,4 @@ func (u CustomerFormatter) Format(e *log.Entry) ([]byte, error) {
 	}
 
 	return u.Formatter.Format(e)
-}
-
-func Init() {
-	logrus := log.New()
-	logrus.SetFormatter(CustomerFormatter{&log.JSONFormatter{}})
-
-	logger = &Logger{
-		logrus,
-	}
-}
-
-func GetLogger() *log.Logger {
-	return logger.logrus
 }

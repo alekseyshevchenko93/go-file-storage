@@ -1,4 +1,4 @@
-package fileService
+package file
 
 import (
 	"crypto/sha1"
@@ -12,23 +12,24 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/alexshv/file-storage/logger"
-	"github.com/alexshv/file-storage/repository"
 	"github.com/alexshv/file-storage/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
-func Upload(
+func (s *fileService) Upload(
 	requestId interface{},
 	uuid uuid.UUID,
 	clientChecksum string,
 	contentType string,
 	bodyStream io.Reader,
 ) error {
+	log := s.log
+	repository := s.fileRepository
+
 	if contentType == "" {
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
 		}).Warn("fileService.upload.emptyContentType")
 
@@ -38,7 +39,7 @@ func Upload(
 	mediaType, params, err := mime.ParseMediaType(contentType)
 
 	if err != nil || mediaType != fiber.MIMEMultipartForm {
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
 			"message":   err,
 		}).Warn("fileService.upload.badMediaType")
@@ -51,7 +52,7 @@ func Upload(
 	part, err := multipartReader.NextPart()
 
 	if err != nil && err != io.EOF {
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
 			"message":   err,
 		}).Error("fileService.upload.failedToReadFirstPart")
@@ -67,7 +68,7 @@ func Upload(
 	defer fd.Close()
 
 	if err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
 			"message":   err,
 		}).Error("fileService.upload.failedToOpenFile")
@@ -75,8 +76,8 @@ func Upload(
 		return fiber.NewError(fiber.StatusInternalServerError)
 	}
 
-	if err = processPart(requestId, part, hasher, fd); err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
+	if err = s.processPart(requestId, part, hasher, fd); err != nil {
+		log.WithFields(logrus.Fields{
 			"requestId": requestId,
 			"message":   err,
 		}).Error("fileService.upload.failedToProcessFromBeginningOfPart")
@@ -92,7 +93,7 @@ func Upload(
 		}
 
 		if err != nil {
-			log.GetLogger().WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"requestId": requestId,
 				"message":   err,
 			}).Error("fileService.upload.failedToReadFromPart")
@@ -100,8 +101,8 @@ func Upload(
 			return fiber.NewError(fiber.StatusInternalServerError)
 		}
 
-		if err = processPart(requestId, part, hasher, fd); err != nil {
-			log.GetLogger().WithFields(logrus.Fields{
+		if err = s.processPart(requestId, part, hasher, fd); err != nil {
+			log.WithFields(logrus.Fields{
 				"requestId": requestId,
 				"message":   err,
 			}).Error("fileService.upload.failedToProcessPart")
@@ -116,7 +117,7 @@ func Upload(
 		err := os.Remove(path)
 
 		if err != nil {
-			log.GetLogger().WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"requestId": requestId,
 				"message":   err,
 			}).Error("fileService.upload.failedToRemoveFile")
@@ -124,7 +125,7 @@ func Upload(
 			return fiber.NewError(fiber.StatusInternalServerError)
 		}
 
-		log.GetLogger().WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"requestId":      requestId,
 			"clientChecksum": clientChecksum,
 			"serverChecksum": serverChecksum,
@@ -138,13 +139,13 @@ func Upload(
 		Extension: extension,
 	}
 
-	err = repository.CreateFile(databaseFile)
+	err = repository.CreateFile(&databaseFile)
 
 	if err != nil {
 		return err
 	}
 
-	log.GetLogger().WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"requestId":      requestId,
 		"serverChecksum": serverChecksum,
 	}).Info("fileService.upload.success")
@@ -152,14 +153,15 @@ func Upload(
 	return nil
 }
 
-func processPart(requestId interface{}, part *multipart.Part, hasher hash.Hash, file *os.File) error {
+func (s *fileService) processPart(requestId interface{}, part *multipart.Part, hasher hash.Hash, file *os.File) error {
+	log := s.log
 	buffer := make([]byte, 1024*1024)
 
 	for {
 		read, err := part.Read(buffer)
 
 		if err != nil && err != io.EOF {
-			log.GetLogger().WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"requestId": requestId,
 				"message":   err,
 			}).Error("handlers.processPart.failedToReadPart")
@@ -170,7 +172,7 @@ func processPart(requestId interface{}, part *multipart.Part, hasher hash.Hash, 
 		_, hasherErr := hasher.Write(buffer[:read])
 
 		if hasherErr != nil {
-			log.GetLogger().WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"requestId": requestId,
 				"message":   err,
 			}).Error("handlers.processPart.failedToWriteToHash")
@@ -181,7 +183,7 @@ func processPart(requestId interface{}, part *multipart.Part, hasher hash.Hash, 
 		_, writeErr := file.WriteString(string(buffer[:read]))
 
 		if writeErr != nil {
-			log.GetLogger().WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"requestId": requestId,
 				"message":   err,
 			}).Error("handlers.processPart.failedToWriteToFile")

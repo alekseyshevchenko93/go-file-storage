@@ -4,19 +4,36 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/alexshv/file-storage/logger"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 )
 
-type DatabaseClient struct {
-	db *sqlx.DB
+type DatabaseClient interface {
+	Shutdown() error
+	GetClient() *sqlx.DB
 }
 
-var client *sqlx.DB
+type databaseClient struct {
+	db  *sqlx.DB
+	log *logrus.Logger
+}
 
-func Init() {
+func (c *databaseClient) GetClient() *sqlx.DB {
+	return c.db
+}
+
+func (c *databaseClient) Shutdown() error {
+	err := c.db.Close()
+
+	if err != nil {
+		return fmt.Errorf("failed to shutdown database %w", err)
+	}
+
+	return nil
+}
+
+func New(log *logrus.Logger) (*databaseClient, error) {
 	host := os.Getenv("POSTGRES_HOST")
 	database := os.Getenv("POSTGRES_DATABASE")
 	user := os.Getenv("POSTGRES_USER")
@@ -26,31 +43,13 @@ func Init() {
 	db, err := sqlx.Connect("postgres", dsn)
 
 	if err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
-			"message": err,
-		}).Error("postgres.connection.error")
-
-		panic(err)
+		return nil, fmt.Errorf("failed to connect to db %w", err)
 	}
 
-	log.GetLogger().Info("postgres.connected")
+	log.Info("db.connected")
 
-	client = db
-}
-
-func Shutdown() {
-	err := client.Close()
-
-	if err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
-			"message": err,
-		}).Error("postgres.shutdown.error")
-		return
-	}
-
-	log.GetLogger().Info("postgres.shutdown.sucess")
-}
-
-func GetClient() *sqlx.DB {
-	return client
+	return &databaseClient{
+		db,
+		log,
+	}, nil
 }

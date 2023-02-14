@@ -1,0 +1,23 @@
+repository: 
+- GetFileByKey
+- CreateFile
+
+file service download:
+- it throws file not found in db
+- it throws file not found in fs
+- returns filepath
+
+file service upload:
+- throws when empty content type
+- throws when content type is not multipart
+- it extracts extension correctly
+- it correctly writes to file
+- it correctly writes to hash
+- it throws when client checksum != server checksum
+- it calls repository.CreateFile
+
+handlers uploadHandler
+- it calls c.json {"key": "something"}
+
+handlers downloadHandler
+- it calls SendFile with correct filepath

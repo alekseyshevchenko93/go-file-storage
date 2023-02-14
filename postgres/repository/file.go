@@ -1,25 +1,36 @@
 package repository
 
 import (
-	log "github.com/alexshv/file-storage/logger"
+	"fmt"
+
 	"github.com/alexshv/file-storage/postgres"
 	"github.com/alexshv/file-storage/types"
-	"github.com/sirupsen/logrus"
 )
 
-func GetFileByKey(key string) (*types.File, error) {
-	client := postgres.GetClient()
+type FileRepository interface {
+	GetFileByKey(key string) (*types.File, error)
+	CreateFile(file *types.File) error
+}
+
+type fileRepository struct {
+	db postgres.DatabaseClient
+}
+
+func NewFileRepository(db postgres.DatabaseClient) *fileRepository {
+	return &fileRepository{
+		db,
+	}
+}
+
+func (r *fileRepository) GetFileByKey(key string) (*types.File, error) {
+	client := r.db.GetClient()
 
 	var f []types.File
 
 	stmt, err := client.PrepareNamed("SELECT * FROM files WHERE key = :key")
 
 	if err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
-			"message": err.Error(),
-		}).Error("postgresRepository.getFileByKey.prepareStatementError")
-
-		return nil, err
+		return nil, fmt.Errorf("failed to prepare select statement: %w", err)
 	}
 
 	params := map[string]interface{}{
@@ -27,11 +38,7 @@ func GetFileByKey(key string) (*types.File, error) {
 	}
 
 	if err := stmt.Select(&f, params); err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
-			"message": err.Error(),
-		}).Error("postgresRepository.getFileByKey.queryError")
-
-		return nil, err
+		return nil, fmt.Errorf("query returned error: %w", err)
 	}
 
 	if len(f) == 0 {
@@ -41,8 +48,8 @@ func GetFileByKey(key string) (*types.File, error) {
 	return &f[0], nil
 }
 
-func CreateFile(file types.File) error {
-	client := postgres.GetClient()
+func (r *fileRepository) CreateFile(file *types.File) error {
+	client := r.db.GetClient()
 
 	params := map[string]interface{}{
 		"key":       file.Key,
@@ -50,11 +57,7 @@ func CreateFile(file types.File) error {
 	}
 
 	if _, err := client.NamedExec("INSERT INTO files(key, extension) VALUES(:key, :extension)", params); err != nil {
-		log.GetLogger().WithFields(logrus.Fields{
-			"message": err.Error(),
-		}).Error("postgresRepository.createfile.error")
-
-		return err
+		return fmt.Errorf("insert returned error: %w", err)
 	}
 
 	return nil

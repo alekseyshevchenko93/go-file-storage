@@ -7,16 +7,16 @@ import (
 	"os/signal"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/joho/godotenv"
 
 	"github.com/alexshv/file-storage/container"
-	controllers "github.com/alexshv/file-storage/controllers"
+	"github.com/alexshv/file-storage/controllers"
 	"github.com/alexshv/file-storage/logger"
-	middlewares "github.com/alexshv/file-storage/middlewares"
+	"github.com/alexshv/file-storage/middlewares"
 	"github.com/alexshv/file-storage/postgres"
 	postgresRepository "github.com/alexshv/file-storage/postgres/repository"
 	fileServicePackage "github.com/alexshv/file-storage/services/file"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
 )
 
 func main() {
@@ -46,7 +46,6 @@ func main() {
 	fileController := controllers.NewFileController()
 	fileRepository := postgresRepository.NewFileRepository(databaseClient)
 	fileService := fileServicePackage.NewFileService(log, fileRepository)
-
 	cnt := container.New(log, fileService)
 
 	app := fiber.New(fiber.Config{
@@ -58,18 +57,17 @@ func main() {
 	defer app.Shutdown()
 
 	app.Server().StreamRequestBody = true
+	app.Use(requestid.New())
 
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("container", cnt)
-		c.Next()
-		return nil
+		return c.Next()
 	})
-
-	app.Use(requestid.New())
 
 	v1 := app.Group("/api/v1")
 	v1.Get("/download/:key", fileController.Download)
 	v1.Post("/upload", fileController.Upload)
+	app.Use(middlewares.NotFoundHandler)
 
 	go func() {
 		port := fmt.Sprintf(":%s", os.Getenv("HTTP_PORT"))

@@ -9,21 +9,21 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type DatabaseClient interface {
+type PostgresClient interface {
 	Shutdown() error
 	GetClient() *sqlx.DB
 }
 
-type databaseClient struct {
+type postgresClient struct {
 	db  *sqlx.DB
 	log *logrus.Logger
 }
 
-func (c *databaseClient) GetClient() *sqlx.DB {
+func (c *postgresClient) GetClient() *sqlx.DB {
 	return c.db
 }
 
-func (c *databaseClient) Shutdown() error {
+func (c *postgresClient) Shutdown() error {
 	err := c.db.Close()
 
 	if err != nil {
@@ -33,7 +33,7 @@ func (c *databaseClient) Shutdown() error {
 	return nil
 }
 
-func New(log *logrus.Logger) (*databaseClient, error) {
+func New(log *logrus.Logger) (*postgresClient, error) {
 	host := os.Getenv("POSTGRES_HOST")
 	database := os.Getenv("POSTGRES_DATABASE")
 	user := os.Getenv("POSTGRES_USER")
@@ -48,7 +48,7 @@ func New(log *logrus.Logger) (*databaseClient, error) {
 
 	log.Info("db.connected")
 
-	return &databaseClient{
+	return &postgresClient{
 		db,
 		log,
 	}, nil

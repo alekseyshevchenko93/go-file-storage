@@ -13,10 +13,10 @@ type FileRepository interface {
 }
 
 type fileRepository struct {
-	db postgres.DatabaseClient
+	db postgres.PostgresClient
 }
 
-func NewFileRepository(db postgres.DatabaseClient) *fileRepository {
+func NewFileRepository(db postgres.PostgresClient) *fileRepository {
 	return &fileRepository{
 		db,
 	}

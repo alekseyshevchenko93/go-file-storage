@@ -35,16 +35,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	databaseClient, err := postgres.New(log)
+	postgresClient, err := postgres.New(log)
 
 	if err != nil {
 		log.WithField("message", err.Error()).Info("init.initDatabase.error")
 	}
 
-	defer databaseClient.Shutdown()
+	defer postgresClient.Shutdown()
 
 	fileController := controllers.NewFileController()
-	fileRepository := repository.NewFileRepository(databaseClient)
+	fileRepository := repository.NewFileRepository(postgresClient)
 	fileService := fileServicePackage.NewFileService(log, fileRepository)
 	cnt := container.New(log, fileService)
 

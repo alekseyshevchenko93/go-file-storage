@@ -3,7 +3,7 @@ package file
 import (
 	"io"
 
-	postgresRepository "github.com/alexshv/file-storage/postgres/repository"
+	repository "github.com/alexshv/file-storage/repository"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
@@ -20,10 +20,10 @@ type FileService interface {
 
 type fileService struct {
 	log            *logrus.Logger
-	fileRepository postgresRepository.FileRepository
+	fileRepository repository.FileRepository
 }
 
-func NewFileService(log *logrus.Logger, repository postgresRepository.FileRepository) *fileService {
+func NewFileService(log *logrus.Logger, repository repository.FileRepository) *fileService {
 	return &fileService{
 		log,
 		repository,

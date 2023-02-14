@@ -15,7 +15,7 @@ import (
 	"github.com/alexshv/file-storage/logger"
 	"github.com/alexshv/file-storage/middlewares"
 	"github.com/alexshv/file-storage/postgres"
-	postgresRepository "github.com/alexshv/file-storage/postgres/repository"
+	repository "github.com/alexshv/file-storage/repository"
 	fileServicePackage "github.com/alexshv/file-storage/services/file"
 )
 
@@ -44,7 +44,7 @@ func main() {
 	defer databaseClient.Shutdown()
 
 	fileController := controllers.NewFileController()
-	fileRepository := postgresRepository.NewFileRepository(databaseClient)
+	fileRepository := repository.NewFileRepository(databaseClient)
 	fileService := fileServicePackage.NewFileService(log, fileRepository)
 	cnt := container.New(log, fileService)
 

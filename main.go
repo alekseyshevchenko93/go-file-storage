@@ -6,17 +6,16 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/joho/godotenv"
 
 	"github.com/alexshv/file-storage/container"
-	"github.com/alexshv/file-storage/controllers"
 	"github.com/alexshv/file-storage/logger"
-	"github.com/alexshv/file-storage/middlewares"
 	"github.com/alexshv/file-storage/postgres"
 	repository "github.com/alexshv/file-storage/repository"
+	"github.com/alexshv/file-storage/server"
+	"github.com/alexshv/file-storage/server/controllers"
 	fileServicePackage "github.com/alexshv/file-storage/services/file"
+	"github.com/alexshv/file-storage/workers"
 )
 
 func main() {
@@ -46,34 +45,25 @@ func main() {
 	fileController := controllers.NewFileController()
 	fileRepository := repository.NewFileRepository(postgresClient)
 	fileService := fileServicePackage.NewFileService(log, fileRepository)
-	cnt := container.New(log, fileService)
+	container := container.New(log, fileService)
 
-	app := fiber.New(fiber.Config{
-		DisableStartupMessage:        true,
-		DisablePreParseMultipartForm: true,
-		ErrorHandler:                 middlewares.ErrorHandler,
-	})
+	worker := workers.NewWorker(log)
+	worker.Start()
+	defer worker.Stop()
 
-	defer app.Shutdown()
+	port := fmt.Sprintf(":%s", os.Getenv("HTTP_PORT"))
+	server := server.NewServer(
+		port,
+		container,
+		fileController,
+	)
 
-	app.Server().StreamRequestBody = true
-	app.Use(requestid.New())
-
-	app.Use(func(c *fiber.Ctx) error {
-		c.Locals("container", cnt)
-		return c.Next()
-	})
-
-	v1 := app.Group("/api/v1")
-	v1.Get("/download/:key", fileController.Download)
-	v1.Post("/upload", fileController.Upload)
-	app.Use(middlewares.NotFoundHandler)
+	defer server.Stop()
 
 	go func() {
-		port := fmt.Sprintf(":%s", os.Getenv("HTTP_PORT"))
 		log.WithField("port", port).Info("server.listening")
 
-		if err := app.Listen(port); err != nil {
+		if err := server.Start(); err != nil {
 			log.WithField("message", err.Error()).Error("server.start.error")
 			os.Exit(1)
 		}

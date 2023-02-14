@@ -8,13 +8,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type fileController struct{}
+type FileController struct{}
 
-func NewFileController() *fileController {
-	return &fileController{}
+func NewFileController() *FileController {
+	return &FileController{}
 }
 
-func (ctr *fileController) Download(c *fiber.Ctx) error {
+func (ctr *FileController) Download(c *fiber.Ctx) error {
 	key := c.Params("key")
 	requestId := c.Locals("requestid")
 	container := c.Locals("container").(*container.Container)
@@ -44,7 +44,7 @@ func (ctr *fileController) Download(c *fiber.Ctx) error {
 	return c.SendFile(filepath)
 }
 
-func (ctr *fileController) Upload(c *fiber.Ctx) error {
+func (ctr *FileController) Upload(c *fiber.Ctx) error {
 	uuid := uuid.New()
 	clientChecksum := c.Query("checksum")
 	contentType := c.Get("Content-Type")

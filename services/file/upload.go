@@ -41,10 +41,10 @@ func (s *fileService) Upload(
 	if err != nil || mediaType != fiber.MIMEMultipartForm {
 		log.WithFields(logrus.Fields{
 			"requestId": requestId,
-			"message":   err,
+			"message":   err.Error(),
 		}).Warn("fileService.upload.badMediaType")
 
-		return fiber.NewError(fiber.StatusBadRequest)
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid media type")
 	}
 
 	boundary := params["boundary"]
@@ -52,12 +52,7 @@ func (s *fileService) Upload(
 	part, err := multipartReader.NextPart()
 
 	if err != nil && err != io.EOF {
-		log.WithFields(logrus.Fields{
-			"requestId": requestId,
-			"message":   err,
-		}).Error("fileService.upload.failedToReadFirstPart")
-
-		return fiber.NewError(fiber.StatusInternalServerError)
+		return fmt.Errorf("multipartReader error, failed to read first part: %w", err)
 	}
 
 	extension := strings.Trim(filepath.Ext(part.FileName()), ".")
@@ -68,21 +63,11 @@ func (s *fileService) Upload(
 	defer fd.Close()
 
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"requestId": requestId,
-			"message":   err,
-		}).Error("fileService.upload.failedToOpenFile")
-
-		return fiber.NewError(fiber.StatusInternalServerError)
+		return fmt.Errorf("failed to open file error: %w", err)
 	}
 
 	if err = s.processPart(requestId, part, hasher, fd); err != nil {
-		log.WithFields(logrus.Fields{
-			"requestId": requestId,
-			"message":   err,
-		}).Error("fileService.upload.failedToProcessFromBeginningOfPart")
-
-		return fiber.NewError(fiber.StatusInternalServerError)
+		return fmt.Errorf("failed to process first part error: %w", err)
 	}
 
 	for {
@@ -93,21 +78,11 @@ func (s *fileService) Upload(
 		}
 
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"requestId": requestId,
-				"message":   err,
-			}).Error("fileService.upload.failedToReadFromPart")
-
-			return fiber.NewError(fiber.StatusInternalServerError)
+			return fmt.Errorf("failed to read part error: %w", err)
 		}
 
 		if err = s.processPart(requestId, part, hasher, fd); err != nil {
-			log.WithFields(logrus.Fields{
-				"requestId": requestId,
-				"message":   err,
-			}).Error("fileService.upload.failedToProcessPart")
-
-			return fiber.NewError(fiber.StatusInternalServerError)
+			return fmt.Errorf("failed to process part error: %w", err)
 		}
 	}
 
@@ -117,12 +92,7 @@ func (s *fileService) Upload(
 		err := os.Remove(path)
 
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"requestId": requestId,
-				"message":   err,
-			}).Error("fileService.upload.failedToRemoveFile")
-
-			return fiber.NewError(fiber.StatusInternalServerError)
+			return fmt.Errorf("failed to remove file error: %w", err)
 		}
 
 		log.WithFields(logrus.Fields{
@@ -154,41 +124,25 @@ func (s *fileService) Upload(
 }
 
 func (s *fileService) processPart(requestId interface{}, part *multipart.Part, hasher hash.Hash, file *os.File) error {
-	log := s.log
 	buffer := make([]byte, 1024*1024)
 
 	for {
 		read, err := part.Read(buffer)
 
 		if err != nil && err != io.EOF {
-			log.WithFields(logrus.Fields{
-				"requestId": requestId,
-				"message":   err,
-			}).Error("handlers.processPart.failedToReadPart")
-
-			return fiber.NewError(fiber.StatusInternalServerError)
+			return fmt.Errorf("processPart, failed to read part: %w", err)
 		}
 
 		_, hasherErr := hasher.Write(buffer[:read])
 
 		if hasherErr != nil {
-			log.WithFields(logrus.Fields{
-				"requestId": requestId,
-				"message":   err,
-			}).Error("handlers.processPart.failedToWriteToHash")
-
-			return fiber.NewError(fiber.StatusInternalServerError)
+			return fmt.Errorf("processPart, failed to write to hash: %w", err)
 		}
 
 		_, writeErr := file.WriteString(string(buffer[:read]))
 
 		if writeErr != nil {
-			log.WithFields(logrus.Fields{
-				"requestId": requestId,
-				"message":   err,
-			}).Error("handlers.processPart.failedToWriteToFile")
-
-			return fiber.NewError(fiber.StatusInternalServerError)
+			return fmt.Errorf("processPart, failed to write file: %w", err)
 		}
 
 		if err != nil && err == io.EOF {

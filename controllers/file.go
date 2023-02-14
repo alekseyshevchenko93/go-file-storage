@@ -31,7 +31,7 @@ func (ctr *fileController) Download(c *fiber.Ctx) error {
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"requestId": requestId,
-			"message":   err,
+			"message":   err.Error(),
 		}).Info("handlers.downloadHandler.error")
 
 		return err
@@ -66,7 +66,7 @@ func (ctr *fileController) Upload(c *fiber.Ctx) error {
 	if err := fileService.Upload(requestId, uuid, clientChecksum, contentType, bodyStream); err != nil {
 		log.WithFields(logrus.Fields{
 			"requestId": requestId,
-			"message":   err,
+			"message":   err.Error(),
 		}).Error("handlers.uploadHandler.error")
 
 		return err

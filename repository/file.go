@@ -30,7 +30,7 @@ func (r *fileRepository) GetFileByKey(key string) (*types.File, error) {
 	stmt, err := client.PrepareNamed("SELECT * FROM files WHERE key = :key")
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to prepare select statement: %w", err)
+		return nil, fmt.Errorf("GetFileByKey, failed to prepare select statement: %w", err)
 	}
 
 	params := map[string]interface{}{
@@ -57,7 +57,7 @@ func (r *fileRepository) CreateFile(file *types.File) error {
 	}
 
 	if _, err := client.NamedExec("INSERT INTO files(key, extension) VALUES(:key, :extension)", params); err != nil {
-		return fmt.Errorf("insert returned error: %w", err)
+		return fmt.Errorf("CreateFile insert returned error: %w", err)
 	}
 
 	return nil

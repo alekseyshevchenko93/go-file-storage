@@ -15,19 +15,10 @@ func (s *fileService) Download(requestId interface{}, key string) (string, error
 	file, err := repository.GetFileByKey(key)
 
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"requestId": requestId,
-			"message":   err.Error(),
-		}).Error("fileService.download.databaseError")
-
-		return "", fiber.NewError(fiber.StatusInternalServerError)
+		return "", fmt.Errorf("get file by key database error: %w", err)
 	}
 
 	if file == nil {
-		log.WithFields(logrus.Fields{
-			"requestId": requestId,
-		}).Warn("fileService.download.fileNotFoundInDatabase")
-
 		return "", fiber.NewError(fiber.StatusNotFound, "File not found")
 	}
 
@@ -45,12 +36,7 @@ func (s *fileService) Download(requestId interface{}, key string) (string, error
 	}
 
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"requestId": requestId,
-			"message":   err.Error(),
-		}).Error("fileService.download.failedToFindFile")
-
-		return "", fiber.NewError(fiber.StatusInternalServerError)
+		return "", fmt.Errorf("find file in file system error: %w", err)
 	}
 
 	return filepath, nil

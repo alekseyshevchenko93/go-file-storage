@@ -1,0 +1,8 @@
+.bash_history
+.vscode/
+test/
+coverage/
+storage/
+postgres-data/
+.env
+bin/

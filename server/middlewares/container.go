@@ -6,5 +6,8 @@ import (
 )
 
 func SetContainer(container *container.Container) func(*fiber.Ctx) error {
-	return nil
+	return func(c *fiber.Ctx) error {
+		c.Locals("container", container)
+		return c.Next()
+	}
 }

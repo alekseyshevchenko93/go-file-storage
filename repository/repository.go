@@ -11,6 +11,7 @@ import (
 type FileRepository interface {
 	GetFileByKey(key string) (*types.File, error)
 	CreateFile(file *types.File) error
+	DeleteFile(file *types.File) error
 	UpdateFileLastDownloadedAt(file *types.File) error
 }
 
@@ -65,8 +66,18 @@ func (r *fileRepository) CreateFile(file *types.File) error {
 	return nil
 }
 
-func DeleteFile() {
+func (r *fileRepository) DeleteFile(file *types.File) error {
+	client := r.db.GetClient()
 
+	params := map[string]interface{}{
+		"id": file.Id,
+	}
+
+	if _, err := client.NamedExec("DELETE FROM files WHERE id = :id", params); err != nil {
+		return fmt.Errorf("DeleteFile error: %w", err)
+	}
+
+	return nil
 }
 
 func (r *fileRepository) UpdateFileLastDownloadedAt(file *types.File) error {

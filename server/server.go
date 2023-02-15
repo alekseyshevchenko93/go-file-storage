@@ -1,8 +1,6 @@
 package server
 
 import (
-	"fmt"
-
 	"github.com/alexshv/file-storage/container"
 	"github.com/alexshv/file-storage/server/controllers"
 	"github.com/alexshv/file-storage/server/middlewares"
@@ -35,16 +33,15 @@ func NewServer(port string, container *container.Container, fileController *cont
 	app.Server().StreamRequestBody = true
 	app.Use(requestid.New())
 
-	fmt.Println("container", container)
-	// app.Use(middlewares.SetContainer(container))
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("container", container)
 		return c.Next()
 	})
 
 	v1 := app.Group("/api/v1")
-	v1.Get("/download/:key", fileController.Download)
-	v1.Post("/upload", fileController.Upload)
+	v1.Get("/download/:key", fileController.DownloadFile)
+	v1.Delete("/download/:key", fileController.DeleteFile)
+	v1.Post("/upload", fileController.UploadFile)
 
 	app.Use(middlewares.NotFoundHandler)
 

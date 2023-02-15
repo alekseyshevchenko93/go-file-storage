@@ -16,6 +16,7 @@ type FileService interface {
 		contentType string,
 		bodyStream io.Reader,
 	) error
+	Delete(requestId interface{}, key string) error
 }
 
 type fileService struct {

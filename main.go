@@ -15,6 +15,7 @@ import (
 	"github.com/alexshv/file-storage/server"
 	"github.com/alexshv/file-storage/server/controllers"
 	fileServicePackage "github.com/alexshv/file-storage/services/file"
+	"github.com/alexshv/file-storage/workers"
 )
 
 func main() {
@@ -46,9 +47,9 @@ func main() {
 	fileService := fileServicePackage.NewFileService(log, fileRepository)
 	container := container.New(log, fileService)
 
-	// worker := workers.NewWorker(log)
-	// worker.Start()
-	// defer worker.Stop()
+	worker := workers.NewWorker(log)
+	worker.Start()
+	defer worker.Stop()
 
 	port := fmt.Sprintf(":%s", os.Getenv("HTTP_PORT"))
 	server := server.NewServer(

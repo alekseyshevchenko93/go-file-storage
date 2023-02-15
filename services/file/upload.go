@@ -37,31 +37,24 @@ func (s *fileService) validateUploadParams(
 	log := s.log
 
 	if contentType == "" {
-		log.WithFields(logrus.Fields{
-			"requestId": requestId,
-		}).Warn("fileService.upload.emptyContentType")
-
 		return "", fiber.NewError(fiber.StatusBadRequest, "Content type is missing")
 	}
 
-	valid, err := s.isValidSha1(clientChecksum)
+	if clientChecksum != "" {
+		valid, err := s.isValidSha1(clientChecksum)
 
-	if err != nil {
-		return "", err
-	}
+		if err != nil {
+			return "", err
+		}
 
-	if valid == false {
-		return "", fiber.NewError(fiber.StatusBadRequest, "Checksum is not a sha1")
+		if valid == false {
+			return "", fiber.NewError(fiber.StatusBadRequest, "Checksum is not a sha1")
+		}
 	}
 
 	mediaType, params, err := mime.ParseMediaType(contentType)
 
 	if err != nil || mediaType != fiber.MIMEMultipartForm {
-		log.WithFields(logrus.Fields{
-			"requestId": requestId,
-			"message":   err.Error(),
-		}).Warn("fileService.upload.badMediaType")
-
 		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid media type")
 	}
 

@@ -11,15 +11,17 @@ type worker struct {
 }
 
 func (w *worker) removeLeastUsedFiles() {
-
+	w.log.Info("worker.removeLeastUsedFiles")
 }
 
 func (w *worker) Start() {
 	w.cron.Start()
+	w.log.Info("worker.started")
 }
 
 func (w *worker) Stop() {
 	w.cron.Stop()
+	w.log.Info("worker.stopped")
 }
 
 func NewWorker(log *logrus.Logger) *worker {
@@ -29,7 +31,7 @@ func NewWorker(log *logrus.Logger) *worker {
 		cron,
 	}
 
-	cron.AddFunc("*/5 * * * *", worker.removeLeastUsedFiles)
+	cron.AddFunc("* * * * *", worker.removeLeastUsedFiles)
 
 	return worker
 }

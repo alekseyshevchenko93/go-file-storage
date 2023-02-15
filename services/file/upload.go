@@ -34,8 +34,6 @@ func (s *fileService) validateUploadParams(
 	contentType string,
 	clientChecksum string,
 ) (string, error) {
-	log := s.log
-
 	if contentType == "" {
 		return "", fiber.NewError(fiber.StatusBadRequest, "Content type is missing")
 	}

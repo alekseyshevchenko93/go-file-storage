@@ -47,7 +47,7 @@ func main() {
 	fileService := fileServicePackage.NewFileService(log, fileRepository)
 	container := container.New(log, fileService)
 
-	worker := workers.NewWorker(log)
+	worker := workers.NewWorker(log, fileRepository)
 	worker.Start()
 	defer worker.Stop()
 

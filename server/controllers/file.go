@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"fmt"
+
 	container "github.com/alexshv/file-storage/container"
 	"github.com/google/uuid"
 
@@ -48,6 +50,8 @@ func (ctr *FileController) Upload(c *fiber.Ctx) error {
 	uuid := uuid.New()
 	clientChecksum := c.Query("checksum")
 	contentType := c.Get("Content-Type")
+
+	fmt.Println("in upload", c.Locals("container"))
 
 	requestId := c.Locals("requestid")
 	container := c.Locals("container").(*container.Container)

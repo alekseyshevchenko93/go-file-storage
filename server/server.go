@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/alexshv/file-storage/container"
 	"github.com/alexshv/file-storage/server/controllers"
 	"github.com/alexshv/file-storage/server/middlewares"
@@ -32,7 +34,13 @@ func NewServer(port string, container *container.Container, fileController *cont
 
 	app.Server().StreamRequestBody = true
 	app.Use(requestid.New())
-	app.Use(middlewares.SetContainer(container))
+
+	fmt.Println("container", container)
+	// app.Use(middlewares.SetContainer(container))
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("container", container)
+		return c.Next()
+	})
 
 	v1 := app.Group("/api/v1")
 	v1.Get("/download/:key", fileController.Download)

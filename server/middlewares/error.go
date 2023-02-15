@@ -2,7 +2,6 @@ package middlewares
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/alexshv/file-storage/container"
 	"github.com/gofiber/fiber/v2"
@@ -10,7 +9,6 @@ import (
 )
 
 func ErrorHandler(c *fiber.Ctx, err error) error {
-	fmt.Println("in error handler")
 	code := fiber.StatusInternalServerError
 	message := "Internal Server Error"
 

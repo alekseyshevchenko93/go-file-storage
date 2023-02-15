@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/alexshv/file-storage/postgres"
 	"github.com/alexshv/file-storage/types"
@@ -10,6 +11,7 @@ import (
 type FileRepository interface {
 	GetFileByKey(key string) (*types.File, error)
 	CreateFile(file *types.File) error
+	UpdateFileLastDownloadedAt(file *types.File) error
 }
 
 type fileRepository struct {
@@ -67,8 +69,21 @@ func DeleteFile() {
 
 }
 
-func UpdateFileLastDownloadedAt() {
+func (r *fileRepository) UpdateFileLastDownloadedAt(file *types.File) error {
+	client := r.db.GetClient()
 
+	params := map[string]interface{}{
+		"id":           file.Id,
+		"downloadedAt": time.Now().Format(time.RFC3339),
+	}
+
+	_, err := client.NamedExec(`UPDATE files SET last_downloaded_at = :downloadedAt WHERE id = :id`, params)
+
+	if err != nil {
+		return fmt.Errorf("update last downloadedAt error: %w", err)
+	}
+
+	return nil
 }
 
 func GetLeastUsedFiles() {

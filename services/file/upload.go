@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/alexshv/file-storage/types"
@@ -17,6 +18,55 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
+
+func (s *fileService) isValidSha1(value string) (bool, error) {
+	match, err := regexp.MatchString("^([0-9A-Fa-f]{2}[:]){19}([0-9A-Fa-f]{2})$", value)
+
+	if err != nil {
+		return false, fmt.Errorf("isValidSha1 error: %w", err)
+	}
+
+	return match, nil
+}
+
+func (s *fileService) validateUploadParams(
+	requestId interface{},
+	contentType string,
+	clientChecksum string,
+) (string, error) {
+	log := s.log
+
+	if contentType == "" {
+		log.WithFields(logrus.Fields{
+			"requestId": requestId,
+		}).Warn("fileService.upload.emptyContentType")
+
+		return "", fiber.NewError(fiber.StatusBadRequest, "Content type is missing")
+	}
+
+	valid, err := s.isValidSha1(clientChecksum)
+
+	if err != nil {
+		return "", err
+	}
+
+	if valid == false {
+		return "", fiber.NewError(fiber.StatusBadRequest, "Checksum is not a sha1")
+	}
+
+	mediaType, params, err := mime.ParseMediaType(contentType)
+
+	if err != nil || mediaType != fiber.MIMEMultipartForm {
+		log.WithFields(logrus.Fields{
+			"requestId": requestId,
+			"message":   err.Error(),
+		}).Warn("fileService.upload.badMediaType")
+
+		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid media type")
+	}
+
+	return params["boundary"], nil
+}
 
 func (s *fileService) Upload(
 	requestId interface{},
@@ -28,26 +78,12 @@ func (s *fileService) Upload(
 	log := s.log
 	repository := s.fileRepository
 
-	if contentType == "" {
-		log.WithFields(logrus.Fields{
-			"requestId": requestId,
-		}).Warn("fileService.upload.emptyContentType")
+	boundary, err := s.validateUploadParams(requestId, contentType, clientChecksum)
 
-		return fiber.NewError(fiber.StatusBadRequest, "Content type is missing")
+	if err != nil {
+		return err
 	}
 
-	mediaType, params, err := mime.ParseMediaType(contentType)
-
-	if err != nil || mediaType != fiber.MIMEMultipartForm {
-		log.WithFields(logrus.Fields{
-			"requestId": requestId,
-			"message":   err.Error(),
-		}).Warn("fileService.upload.badMediaType")
-
-		return fiber.NewError(fiber.StatusBadRequest, "Invalid media type")
-	}
-
-	boundary := params["boundary"]
 	multipartReader := multipart.NewReader(bodyStream, boundary)
 	part, err := multipartReader.NextPart()
 

@@ -39,5 +39,7 @@ func (s *fileService) Download(requestId interface{}, key string) (string, error
 		return "", fmt.Errorf("find file in file system error: %w", err)
 	}
 
+	repository.UpdateFileLastDownloadedAt(file)
+
 	return filepath, nil
 }

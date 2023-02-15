@@ -102,7 +102,7 @@ func (r *fileRepository) GetLeastUsedFilesIds(date *time.Time) ([]int, error) {
 	client := r.db.GetClient()
 
 	params := map[string]interface{}{
-		"date": date,
+		"date": date.Format(time.RFC3339),
 	}
 
 	var ids []int

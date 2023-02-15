@@ -82,7 +82,13 @@ func (s *fileService) Upload(
 		return fmt.Errorf("multipartReader error, failed to read first part: %w", err)
 	}
 
-	extension := strings.Trim(filepath.Ext(part.FileName()), ".")
+	filePathExtension := filepath.Ext(part.FileName())
+
+	if filePathExtension == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "File is missing extension")
+	}
+
+	extension := strings.Trim(filePathExtension, ".")
 	path := fmt.Sprintf("%s/%s.%s", os.Getenv("STORAGE_PATH"), uuid, extension)
 	hasher := sha1.New()
 
@@ -128,7 +134,7 @@ func (s *fileService) Upload(
 			"serverChecksum": serverChecksum,
 		}).Warn("fileService.upload.checksumsDontMatch")
 
-		return fiber.NewError(fiber.StatusUnprocessableEntity, "Please upload again, client checksum is not requal to server checksum")
+		return fiber.NewError(fiber.StatusBadRequest, "Please upload again, client checksum is not requal to server checksum")
 	}
 
 	databaseFile := types.File{

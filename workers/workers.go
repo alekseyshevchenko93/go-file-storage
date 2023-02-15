@@ -29,7 +29,7 @@ func (w *worker) removeLeastUsedFiles() {
 		return
 	}
 
-	log.WithField("ids", ids).Error("worker.removeLeastUsedFiles.success")
+	log.WithField("ids", ids).Info("worker.removeLeastUsedFiles.success")
 }
 
 func (w *worker) Start() {

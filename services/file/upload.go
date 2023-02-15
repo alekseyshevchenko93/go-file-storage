@@ -29,7 +29,7 @@ func (s *fileService) isValidSha1(value string) (bool, error) {
 	return match, nil
 }
 
-func (s *fileService) validateUploadParams(
+func (s *fileService) validateUploadRequest(
 	requestId interface{},
 	contentType string,
 	clientChecksum string,
@@ -69,7 +69,7 @@ func (s *fileService) Upload(
 	log := s.log
 	repository := s.fileRepository
 
-	boundary, err := s.validateUploadParams(requestId, contentType, clientChecksum)
+	boundary, err := s.validateUploadRequest(requestId, contentType, clientChecksum)
 
 	if err != nil {
 		return err

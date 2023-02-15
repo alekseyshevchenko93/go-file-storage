@@ -4,27 +4,30 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/alexshv/file-storage/types"
 	"github.com/gofiber/fiber/v2"
 )
 
-func (s *fileService) Delete(requestId interface{}, key string) error {
+func (s *fileService) validateDeleteRequest(key string) (*types.File, error) {
 	repository := s.fileRepository
 
 	file, err := repository.GetFileByKey(key)
 
 	if err != nil {
-		return fmt.Errorf("get file by key database error: %w", err)
+		return nil, fmt.Errorf("get file by key database error: %w", err)
 	}
 
 	if file == nil {
-		return fiber.NewError(fiber.StatusNotFound, "File not found")
+		return nil, fiber.NewError(fiber.StatusNotFound, "File not found")
 	}
 
-	repository.DeleteFile(file)
+	return file, nil
+}
 
-	filepath := fmt.Sprintf("%s/%s.%s", os.Getenv("STORAGE_PATH"), file.Key, file.Extension)
+func (s *fileService) deleteFromDisk(file *types.File) error {
+	filepath := s.getFilepath(file)
 
-	_, err = os.Stat(filepath)
+	_, err := os.Stat(filepath)
 
 	if err != nil && err == os.ErrNotExist {
 		return fiber.NewError(fiber.StatusNotFound, "File not found")
@@ -36,6 +39,24 @@ func (s *fileService) Delete(requestId interface{}, key string) error {
 
 	if err := os.Remove(filepath); err != nil {
 		return fmt.Errorf("os.Remove error: %w", err)
+	}
+
+	return nil
+}
+
+func (s *fileService) Delete(requestId interface{}, key string) error {
+	repository := s.fileRepository
+
+	file, err := s.validateDeleteRequest(key)
+
+	if err != nil {
+		return err
+	}
+
+	repository.DeleteFile(file)
+
+	if err := s.deleteFromDisk(file); err != nil {
+		return err
 	}
 
 	return nil

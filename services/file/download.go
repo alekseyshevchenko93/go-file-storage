@@ -4,9 +4,26 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/alexshv/file-storage/types"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 )
+
+func (s *fileService) validateDownloadRequest(key string) (*types.File, error) {
+	repository := s.fileRepository
+
+	file, err := repository.GetFileByKey(key)
+
+	if err != nil {
+		return nil, fmt.Errorf("get file by key database error: %w", err)
+	}
+
+	if file == nil {
+		return nil, fiber.NewError(fiber.StatusNotFound, "File not found")
+	}
+
+	return file, nil
+}
 
 func (s *fileService) Download(requestId interface{}, key string) (string, error) {
 	log := s.log
@@ -15,14 +32,14 @@ func (s *fileService) Download(requestId interface{}, key string) (string, error
 	file, err := repository.GetFileByKey(key)
 
 	if err != nil {
-		return "", fmt.Errorf("get file by key database error: %w", err)
+		return "", err
 	}
 
 	if file == nil {
 		return "", fiber.NewError(fiber.StatusNotFound, "File not found")
 	}
 
-	filepath := fmt.Sprintf("%s/%s.%s", os.Getenv("STORAGE_PATH"), file.Key, file.Extension)
+	filepath := s.getFilepath(file)
 
 	_, err = os.Stat(filepath)
 
@@ -40,7 +57,7 @@ func (s *fileService) Download(requestId interface{}, key string) (string, error
 	}
 
 	if err := repository.UpdateFileLastDownloadedAt(file); err != nil {
-		return "", fmt.Errorf("repository.UpdateFileLastDownloadedAt err: %w", err)
+		return "", err
 	}
 
 	return filepath, nil

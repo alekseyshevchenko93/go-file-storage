@@ -11,6 +11,10 @@ import (
 func (s *fileService) validateDeleteRequest(key string) (*types.File, error) {
 	repository := s.fileRepository
 
+	if s.validateUuid(key) == false {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid key")
+	}
+
 	file, err := repository.GetFileByKey(key)
 
 	if err != nil {

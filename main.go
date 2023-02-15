@@ -47,7 +47,7 @@ func main() {
 	fileService := fileServicePackage.NewFileService(log, fileRepository)
 	container := container.New(log, fileService)
 
-	worker := workers.NewWorker(log, fileRepository)
+	worker := workers.NewWorker(ctx, log, fileRepository)
 	worker.Start()
 	defer worker.Stop()
 
@@ -61,7 +61,7 @@ func main() {
 	defer server.Stop()
 
 	go func() {
-		log.WithField("port", port).Info("server.listening")
+		log.WithField("port", port).Info("server.started")
 
 		if err := server.Start(); err != nil {
 			log.WithField("message", err.Error()).Error("server.start.error")

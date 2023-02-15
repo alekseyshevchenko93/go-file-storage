@@ -31,6 +31,11 @@ func (s *fileService) getFilepath(file *types.File) string {
 	return fmt.Sprintf("%s/%s.%s", os.Getenv("STORAGE_PATH"), file.Key, file.Extension)
 }
 
+func (s *fileService) validateUuid(value string) bool {
+	_, err := uuid.Parse(value)
+	return err == nil
+}
+
 func NewFileService(log *logrus.Logger, repository repository.FileRepository) *fileService {
 	return &fileService{
 		log,

@@ -1,6 +1,8 @@
 package workers
 
 import (
+	"context"
+	"os"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -12,6 +14,7 @@ type FileDeleter interface {
 }
 
 type worker struct {
+	context    context.Context
 	log        *logrus.Logger
 	cron       *cron.Cron
 	repository FileDeleter
@@ -21,11 +24,18 @@ func (w *worker) removeLeastUsedFiles() {
 	log := w.log
 
 	log.Info("worker.removeLeastUsedFiles.started")
-	now := time.Now()
+	duration, err := time.ParseDuration(os.Getenv("FILE_RETENTION_PERIOD"))
+
+	if err != nil {
+		log.WithField("message", err.Error()).Error("worker.removeLeastUsedFiles.failedToParseDurationError")
+		return
+	}
+
+	now := time.Now().Add(duration)
 	ids, err := w.repository.GetLeastUsedFilesIds(&now)
 
 	if err != nil {
-		log.WithField("message", err.Error()).Error("worker.removeLeastUsedFiles.error")
+		log.WithField("message", err.Error()).Error("worker.removeLeastUsedFiles.queryError")
 		return
 	}
 
@@ -42,9 +52,10 @@ func (w *worker) Stop() {
 	w.log.Info("worker.stopped")
 }
 
-func NewWorker(log *logrus.Logger, repository FileDeleter) *worker {
+func NewWorker(context context.Context, log *logrus.Logger, repository FileDeleter) *worker {
 	cron := cron.New()
 	worker := &worker{
+		context,
 		log,
 		cron,
 		repository,

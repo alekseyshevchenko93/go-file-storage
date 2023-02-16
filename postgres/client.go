@@ -30,6 +30,8 @@ func (c *postgresClient) Shutdown() error {
 		return fmt.Errorf("failed to shutdown database %w", err)
 	}
 
+	c.log.Info("db.shutdown")
+
 	return nil
 }
 

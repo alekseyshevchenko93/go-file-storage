@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
 
@@ -26,13 +27,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
-
 	if err := os.MkdirAll(os.Getenv("STORAGE_PATH"), os.ModeDir); err != nil {
 		log.WithField("message", err).Info("init.storagePath.error")
 		os.Exit(1)
 	}
+
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer cancel()
 
 	postgresClient, err := postgres.New(log)
 
@@ -65,13 +66,12 @@ func main() {
 
 		if err := server.Start(); err != nil {
 			log.WithField("message", err.Error()).Error("server.start.error")
-			os.Exit(1)
+			return
 		}
 	}()
 
 	select {
 	case <-ctx.Done():
 		log.Info("server.shutdown")
-		os.Exit(0)
 	}
 }

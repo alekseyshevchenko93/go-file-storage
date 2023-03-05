@@ -6,3 +6,4 @@ storage/
 postgres-data/
 .env
 bin/
+.DS_Store

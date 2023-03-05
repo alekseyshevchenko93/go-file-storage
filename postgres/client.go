@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+//go:generate mockery --name IPostgresClient
 type PostgresClient interface {
 	Shutdown() error
 	GetClient() *sqlx.DB
